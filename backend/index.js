@@ -7,57 +7,38 @@ require('dotenv').config({
 const express = require('express');
 const mongoose = require('mongoose')
 
-const PORT = process.env.PORT || 4044;
-const MONGO_URL = process.env.MONGO_URL;
-const { handler } = require("./controller")
-
-
-mongoose.connect(MONGO_URL).then(()=>{
-  console.log('successfuly connected to mongoDB Database')
-}).catch((err)=>console.log(err));
-
-
-const userSchema = new mongoose.Schema({
-  name:String,
-  surname:String
-})
-
-const UserModel = mongoose.model("users", userSchema)
-
+const usersRouter = require('./src/routes/users.routes');
+const pollsRouter = require('./src/routes/polls.routes');
+const { notFound, errorHandler } = require('./src/middleware/error');
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+// Routes
+app.use('/api/users', usersRouter);
+app.use('/api/polls', pollsRouter);
+ 
+// 404 + error handler
+app.use(notFound);
+app.use(errorHandler);
 
-// Handle root POST explicitly 
-app.post('/', async (req, res) => {
-  console.log(req.body)
-  res.send(await handler(req));
+const PORT = process.env.PORT || 4044;
+const MONGO_URL = process.env.MONGO_URL;
 
+if (!MONGO_URL) {
+  console.error('❌ MONGO_URL is required');
+  process.exit(1);
+}
+
+mongoose.connect(MONGO_URL, {
+  maxPoolSize: 20,
+  serverSelectionTimeoutMS: 5000,
+}).then(() => {
+  console.log('✅ MongoDB connected');
+  app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+}).catch((err) => {
+  console.error('❌ Mongo connect error:', err.message);
+  process.exit(1);
 });
-
-app.get('/getUsers', async (req,res) => {
-  const userData = await UserModel.find(); 
-  res.json(userData) 
-})
-// Catch ALL other POST paths via RegExp (works in Express 5)
-app.post(/.*/, async (req, res) => {
-  console.log(req.body)
-    res.send(await handler(req));
-
-});
-
-// Health check
-app.get('/', async (req, res) => {
-  res.send(await handler(req));
-});
-
-// 404 for everything else (optional)
-app.use((req, res) => res.status(404).json({ error: 'Not found' }));
-
-app.listen(PORT, (err) => {
-  if (err) console.error(err);
-  console.log('Server listening on PORT', PORT);
-});
-
 
 
