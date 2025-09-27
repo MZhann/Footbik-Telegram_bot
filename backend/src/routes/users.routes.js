@@ -4,7 +4,7 @@ const ctrl = require('../controllers/user.controller');
 
 router.get('/', ctrl.list);
 router.get('/:id', ctrl.getOne);
-router.post('/', ctrl.create);
+router.post('/createUser', ctrl.create);
 router.patch('/:id', ctrl.update);
 router.delete('/:id', ctrl.remove);
 

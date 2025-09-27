@@ -1,34 +1,29 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const TUNNEL_HOST = env.VITE_TUNNEL_HOST // напр. disable-rochester-cells-rrp.trycloudflare.com
+// Read tunnel host from env (optional)
+const TUNNEL_HOST = process.env.VITE_TUNNEL_HOST
 
-  return {
-    plugins: [react()],
-    server: {
-      host: true,          // слушать 0.0.0.0
-      port: 5173,
-      // Вариант 1: безопаснее — явно указать домен туннеля
-      allowedHosts: TUNNEL_HOST ? [TUNNEL_HOST] : true, // Вариант 2: true = разрешить все (только в дев!)
-      hmr: {
-        host: TUNNEL_HOST || 'localhost',
-        protocol: TUNNEL_HOST ? 'wss' : 'ws',
-        clientPort: TUNNEL_HOST ? 443 : 5173,
-      },
-    },
-    preview: {
-      port: 5173,
-      allowedHosts: TUNNEL_HOST ? [TUNNEL_HOST] : true,
-    }
-  }
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    // Bind to all interfaces so tunnels can reach the dev server
+    host: true,
+
+    // ✅ Allow Cloudflare Quick Tunnels (ANY subdomain) and optionally your exact host
+    // Using the wildcard means you don't need to change this on every new tunnel.
+    allowedHosts: ['.trycloudflare.com', ...(TUNNEL_HOST ? [TUNNEL_HOST] : [])],
+
+    // Optional but recommended for stable HMR via HTTPS tunnel
+    // If you notice HMR not reconnecting, uncomment and set the host.
+    ...(TUNNEL_HOST
+      ? {
+          hmr: {
+            host: TUNNEL_HOST, // your *.trycloudflare.com host
+            protocol: 'wss',
+            clientPort: 443,
+          },
+        }
+      : {}),
+  },
 })
-
-// import { defineConfig } from 'vite'
-// import react from '@vitejs/plugin-react'
-
-// // https://vite.dev/config/
-// export default defineConfig({
-//   plugins: [react()],
-// })

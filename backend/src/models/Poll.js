@@ -20,10 +20,20 @@ const PollSchema = new mongoose.Schema({
     name:     { type: String }
   },
   votes:     { type: [VoteSchema], default: [] },
+  status:    { type: String, enum: ["ACTIVE", "CLOSED"], default: "ACTIVE", index: true },
   closedAt:  { type: Date },    
 }, { timestamps: true });
 
 PollSchema.index({ chatId: 1, messageId: 1 }, { unique: true });
 PollSchema.index({ chatId: 1, createdAt: -1 }); 
+PollSchema.index({ chatId: 1, status: 1, createdAt: -1 }); // fast latest-active lookups
+
+
+PollSchema.pre("save", function(next) {
+  if (this.closedAt && this.status !== "CLOSED") {
+    this.status = "CLOSED";
+  }
+  next();
+});
 
 module.exports = mongoose.model("Poll", PollSchema);
